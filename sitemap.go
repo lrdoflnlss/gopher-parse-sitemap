@@ -4,6 +4,7 @@ package sitemap
 
 import (
 	"encoding/xml"
+	"fmt"
 	"io"
 	"net/http"
 	"os"
@@ -92,11 +93,25 @@ func ParseFromFile(sitemapPath string, consumer EntryConsumer) error {
 // ParseFromSite downloads sitemap from a site, parses it and for each sitemap
 // entry calls the consumer's function.
 func ParseFromSite(url string, consumer EntryConsumer) error {
-	res, err := http.Get(url)
+	client := &http.Client{
+		Timeout: 30 * time.Second, // устанавливаем таймаут
+	}
+
+	req, err := http.NewRequest("GET", url, nil)
+	if err != nil {
+		return err
+	}
+	req.Header.Set("User-Agent", "Mozilla/5.0 (compatible; gopher-parse-sitemap/1.0; +https://github.com/oxffaa/gopher-parse-sitemap)")
+
+	res, err := client.Do(req)
 	if err != nil {
 		return err
 	}
 	defer res.Body.Close()
+
+	if res.StatusCode != http.StatusOK {
+		return fmt.Errorf("unexpected status code: %d, most likely antibot gate", res.StatusCode)
+	}
 
 	return Parse(res.Body, consumer)
 }
@@ -127,11 +142,25 @@ func ParseIndexFromFile(sitemapPath string, consumer IndexEntryConsumer) error {
 // ParseIndexFromSite downloads sitemap index from a site, parses it and for each sitemap
 // index entry calls the consumer's function.
 func ParseIndexFromSite(sitemapURL string, consumer IndexEntryConsumer) error {
-	res, err := http.Get(sitemapURL)
+	client := &http.Client{
+		Timeout: 30 * time.Second,
+	}
+
+	req, err := http.NewRequest("GET", sitemapURL, nil)
+	if err != nil {
+		return err
+	}
+	req.Header.Set("User-Agent", "Mozilla/5.0 (compatible; gopher-parse-sitemap/1.0; +https://github.com/oxffaa/gopher-parse-sitemap)")
+
+	res, err := client.Do(req)
 	if err != nil {
 		return err
 	}
 	defer res.Body.Close()
+
+	if res.StatusCode != http.StatusOK {
+		return fmt.Errorf("unexpected status code: %d, most likely antibot gate", res.StatusCode)
+	}
 
 	return ParseIndex(res.Body, consumer)
 }
